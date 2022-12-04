@@ -47,7 +47,7 @@ def calc_real_outcome(a, b):
         return calc_outcome(a, trounced_by[a])
 
 def main(data):
-    pairs = list(read_input(stream))
+    pairs = list(data)
     total_points_orig = sum(calc_outcome(a, code[b]) for (a, b) in pairs)
     total_points_modified = sum(calc_real_outcome(*pair) for pair in pairs)
     print("Total points following original guide:", total_points_orig)

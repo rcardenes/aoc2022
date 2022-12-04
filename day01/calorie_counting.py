@@ -12,7 +12,7 @@ def read_input(stream):
         yield total
 
 def main(data):
-    list_of_calories = list(read_input(stream))
+    list_of_calories = list(data)
     list_of_calories.sort()
     print("Max calories from any elf:", list_of_calories[-1])
     print("Total calories from the top 3 carriers:", sum(list_of_calories[-3:]))
