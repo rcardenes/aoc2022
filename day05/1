@@ -87,4 +87,4 @@ def main(data):
 
 if __name__ == '__main__':
     with open(sys.argv[1]) as stream:
-        main(read_input(stream))
+        main(alt_read_input(stream))
