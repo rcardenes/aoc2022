@@ -2,15 +2,9 @@
 
 import sys
 from collections import namedtuple
+from pprint import pprint
 
-Directory = namedtuple('Directory', 'parent name contents size')
-File = namedtuple('File', 'name size')
-
-def sizeOf(member):
-    if isinstance(member, File):
-        return member.size
-    else:
-        return sum(sizeOf(m) for m in member.contents.values())
+Directory = namedtuple('Directory', 'contents size')
 
 def updateSizes(member):
     if isinstance(member, File):
@@ -23,53 +17,66 @@ def updateSizes(member):
                          sum(v.size for v in new_contents.values()))
 
 def read_input(stream):
-    root = Directory(None, '/', {}, None)
-    current = root
-    listing = False
+    dirs = {}
+    current = ''
+
+    def switch_to(dir_name):
+        match dir_name:
+            case '/':
+                path = '/'
+            case '..':
+                path = (current.rpartition('/')[0]) or '/'
+            case _:
+                path = ('/' + name) if current == '/' else  '/'.join((current, dir_name))
+        if path not in dirs:
+            dirs[path] = Directory(set(), 0)
+        return path
+
+    def updateSizes(node_dir, node, size):
+        the_dir = dirs[node_dir]
+        if node not in the_dir:
+            dirs[node_dir] = Directory(the_dir.contents | {node},
+                                       the_dir.size + size)
+            while node_dir != '/':
+                node_dir = node_dir.rpartition('/')[0] or '/'
+                the_dir = dirs[node_dir]
+                dirs[node_dir] = Directory(the_dir.contents,
+                                           the_dir.size + size)
+
+    current = switch_to('/')
     for line in stream:
         bits = line.strip().split()
         match bits:
             case ['$', 'cd', '/']:
-                current = root
+                current = switch_to('/')
             case ['$', 'cd', '..']:
-                current = current.parent
+                current = switch_to('..')
             case ['$', 'cd', name]:
-                current = current.contents[name]
+                current = switch_to(name)
             case ['$', 'ls']:
                 # Do nothing, we're listing
                 ...
             case ['dir', name]:
-                # Listing a directory
-                if name not in current.contents:
-                    current.contents[name] = Directory(current, name, {}, 0)
+                # Ignore this one as well, not relevant in our structure representation
+                ...
             case [size, name]:
                 # We're listing a regular file
-                current.contents[name] = File(name, int(size))
+                updateSizes(current, name, int(size))
 
-    return updateSizes(root)
+    return dirs
 
 def sumSizesUpTo(threshold, root):
-    subdirs = [v for v in root.contents.values() if isinstance(v, Directory)]
-    sumHere = sum(v.size for v in subdirs if v.size <= threshold)
-    sumRecur = sum(sumSizesUpTo(threshold, v) for v in subdirs)
-    return sumHere + sumRecur
+    return sum(v.size for v in root.values() if v.size <= threshold)
 
 def findSizesEqualOrOver(threshold, root):
-    if root.size < threshold:
-        return []
-    result = [root.size]
-    for v in root.contents.values():
-        if isinstance(v, Directory):
-            result += findSizesEqualOrOver(threshold, v)
-
-    return result
+    return [v.size for v in root.values() if v.size >= threshold]
 
 FILESYSTEM_SIZE = 70000000
 NEEDED_UNUSED = 30000000
 
 def main(data):
     print("Total in dirs up to 100000:", sumSizesUpTo(100000, data))
-    currentFree = FILESYSTEM_SIZE - data.size
+    currentFree = FILESYSTEM_SIZE - data['/'].size
     print("Smallest directory size that gives us the wanted space:",
           sorted(findSizesEqualOrOver(NEEDED_UNUSED - currentFree, data))[0])
 
